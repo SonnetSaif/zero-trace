@@ -24,33 +24,156 @@ function isHistoryMatch(historyUrl, targetDomain, targetPath) {
         const parsedUrl = new URL(historyUrl);
         const historyDomain = parsedUrl.hostname;
         const historyPath = parsedUrl.pathname;
+        const domainMatch = historyDomain === targetDomain ||
+            historyDomain.endsWith(`.${targetDomain}`);
 
-        // Check domain and subdomains (*.domain.com matches domain.com)
-        const domainMatch = historyDomain === targetDomain || 
-                          historyDomain.endsWith(`.${targetDomain}`);
-        
         if (!domainMatch) return false;
 
-        // Check path prefix
         if (targetPath && targetPath !== '/') {
             return historyPath.startsWith(targetPath);
         }
-        
+
         return true;
     } catch {
         return false;
     }
 }
 
-// Clean history
-async function cleanHistory(domain, path) {
+function isKeywordHistoryMatch(historyItem, keyword) {
+    const normalizedKeyword = keyword.toLowerCase();
+    const url = (historyItem.url || '').toLowerCase();
+    const title = (historyItem.title || '').toLowerCase();
+    return url.includes(normalizedKeyword) || title.includes(normalizedKeyword);
+}
+
+function getCookieLookupDomain(domain) {
+    return domain.startsWith('.') ? domain : `.${domain}`;
+}
+
+function buildCookieRemovalUrl(cookie) {
+    const cookieDomain = cookie.domain.startsWith('.')
+        ? cookie.domain.slice(1)
+        : cookie.domain;
+    const protocol = cookie.secure ? 'https' : 'http';
+    return `${protocol}://${cookieDomain}${cookie.path}`;
+}
+
+async function getCookiesByDomain(domain) {
     return new Promise((resolve) => {
+        chrome.cookies.getAll({ domain: domain }, (cookies) => {
+            resolve(cookies);
+        });
+    });
+}
+
+async function removeCookies(cookies) {
+    return new Promise((resolve) => {
+        if (!cookies.length) {
+            resolve(0);
+            return;
+        }
+
+        const seen = new Set();
+        const uniqueCookies = cookies.filter((cookie) => {
+            const key = `${cookie.storeId}|${cookie.domain}|${cookie.path}|${cookie.name}`;
+            if (seen.has(key)) {
+                return false;
+            }
+
+            seen.add(key);
+            return true;
+        });
+
+        let deleted = 0;
+        let processed = 0;
+
+        uniqueCookies.forEach((cookie) => {
+            chrome.cookies.remove({
+                url: buildCookieRemovalUrl(cookie),
+                name: cookie.name,
+                storeId: cookie.storeId
+            }, (removedCookie) => {
+                if (removedCookie) {
+                    deleted++;
+                }
+
+                processed++;
+                if (processed === uniqueCookies.length) {
+                    resolve(deleted);
+                }
+            });
+        });
+    });
+}
+
+async function findOriginsForKeyword(keyword) {
+    const keywordLower = keyword.toLowerCase();
+    const origins = new Set();
+
+    await Promise.all([
+        new Promise((resolve) => {
+            chrome.history.search({ text: keywordLower, maxResults: 999999 }, (results) => {
+                results.forEach((item) => {
+                    try {
+                        const parsedUrl = new URL(item.url);
+                        const hostname = parsedUrl.hostname.toLowerCase();
+                        if (hostname.includes(keywordLower)) {
+                            origins.add(`https://${hostname}`);
+                            origins.add(`http://${hostname}`);
+                        }
+                    } catch {
+                        // Ignore invalid URL entries from history.
+                    }
+                });
+
+                resolve();
+            });
+        }),
+        new Promise((resolve) => {
+            chrome.cookies.getAll({}, (cookies) => {
+                cookies.forEach((cookie) => {
+                    const cookieDomain = cookie.domain.startsWith('.')
+                        ? cookie.domain.slice(1)
+                        : cookie.domain;
+                    const normalizedDomain = cookieDomain.toLowerCase();
+                    if (normalizedDomain.includes(keywordLower)) {
+                        origins.add(`https://${normalizedDomain}`);
+                        origins.add(`http://${normalizedDomain}`);
+                    }
+                });
+
+                resolve();
+            });
+        })
+    ]);
+
+    return Array.from(origins);
+}
+
+// Clean history
+async function cleanHistory(target) {
+    return new Promise((resolve) => {
+        if (target.matchMode === 'keyword') {
+            chrome.history.search({ text: target.keyword, maxResults: 999999 }, (results) => {
+                const toDelete = results.filter((item) =>
+                    isKeywordHistoryMatch(item, target.keyword)
+                );
+
+                toDelete.forEach((item) => {
+                    chrome.history.deleteUrl({ url: item.url });
+                });
+
+                resolve(toDelete.length);
+            });
+            return;
+        }
+
         chrome.history.search({ text: '', maxResults: 999999 }, (results) => {
-            const toDelete = results.filter(item => 
-                isHistoryMatch(item.url, domain, path)
+            const toDelete = results.filter((item) =>
+                isHistoryMatch(item.url, target.domain, target.path)
             );
 
-            toDelete.forEach(item => {
+            toDelete.forEach((item) => {
                 chrome.history.deleteUrl({ url: item.url });
             });
 
@@ -60,46 +183,60 @@ async function cleanHistory(domain, path) {
 }
 
 // Clean cookies
-async function cleanCookies(domain) {
-    return new Promise((resolve) => {
-        chrome.cookies.getAll({ domain: domain }, (cookies) => {
-            let deleted = 0;
-            cookies.forEach(cookie => {
-                chrome.cookies.remove({
-                    url: `https://${domain}${cookie.path}`,
-                    name: cookie.name,
-                    storeId: cookie.storeId
-                }, () => {
-                    deleted++;
-                });
-            });
-
-            // Also check subdomains
-            chrome.cookies.getAll({ domain: `.${domain}` }, (subdomainCookies) => {
-                subdomainCookies.forEach(cookie => {
-                    chrome.cookies.remove({
-                        url: `https://${domain}${cookie.path}`,
-                        name: cookie.name,
-                        storeId: cookie.storeId
-                    }, () => {
-                        deleted++;
-                    });
-                });
-
-                setTimeout(() => resolve(deleted), 500);
+async function cleanCookies(target) {
+    if (target.matchMode === 'keyword') {
+        return new Promise((resolve) => {
+            chrome.cookies.getAll({}, async (cookies) => {
+                const matchingCookies = cookies.filter((cookie) =>
+                    cookie.domain.toLowerCase().includes(target.keyword)
+                );
+                const deleted = await removeCookies(matchingCookies);
+                resolve(deleted);
             });
         });
-    });
+    }
+
+    const directCookies = await getCookiesByDomain(target.domain);
+    const subdomainCookies = await getCookiesByDomain(
+        getCookieLookupDomain(target.domain)
+    );
+    return removeCookies([...directCookies, ...subdomainCookies]);
 }
 
 // Clean cache/browsing data
-async function cleanCache(domain) {
+async function cleanCache(target) {
     return new Promise((resolve) => {
+        if (target.matchMode === 'keyword') {
+            findOriginsForKeyword(target.keyword).then((origins) => {
+                if (!origins.length) {
+                    resolve(0);
+                    return;
+                }
+
+                chrome.browsingData.remove(
+                    {
+                        origins: origins,
+                        since: 0
+                    },
+                    {
+                        cache: true,
+                        cacheStorage: true,
+                        cookies: false,
+                        history: false
+                    },
+                    () => {
+                        resolve(origins.length);
+                    }
+                );
+            });
+            return;
+        }
+
         const origins = [
-            `https://${domain}`,
-            `http://${domain}`,
-            `https://www.${domain}`,
-            `http://www.${domain}`
+            `https://${target.domain}`,
+            `http://${target.domain}`,
+            `https://www.${target.domain}`,
+            `http://www.${target.domain}`
         ];
 
         chrome.browsingData.remove(
@@ -124,8 +261,12 @@ async function cleanCache(domain) {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'cleanData') {
         (async () => {
-            const domain = message.domain;
-            const path = message.path;
+            const target = {
+                matchMode: message.matchMode === 'keyword' ? 'keyword' : 'url',
+                domain: message.domain,
+                path: message.path || '/',
+                keyword: message.keyword ? message.keyword.toLowerCase() : null
+            };
             const results = {
                 history: 0,
                 cookies: 0,
@@ -134,13 +275,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
             try {
                 if (message.cleanHistory) {
-                    results.history = await cleanHistory(domain, path);
+                    results.history = await cleanHistory(target);
                 }
                 if (message.cleanCookies) {
-                    results.cookies = await cleanCookies(domain);
+                    results.cookies = await cleanCookies(target);
                 }
                 if (message.cleanCache) {
-                    results.cache = await cleanCache(domain);
+                    results.cache = await cleanCache(target);
                 }
 
                 sendResponse({
@@ -185,8 +326,10 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         if (domain) {
             chrome.runtime.sendMessage({
                 action: 'cleanData',
+                matchMode: 'url',
                 domain: domain,
                 path: '/',
+                keyword: null,
                 cleanHistory: true,
                 cleanCookies: true,
                 cleanCache: true
@@ -203,8 +346,10 @@ chrome.commands.onCommand.addListener((command) => {
             if (domain) {
                 chrome.runtime.sendMessage({
                     action: 'cleanData',
+                    matchMode: 'url',
                     domain: domain,
                     path: '/',
+                    keyword: null,
                     cleanHistory: true,
                     cleanCookies: true,
                     cleanCache: true

@@ -18,6 +18,25 @@ function extractPath(url) {
     }
 }
 
+function buildCleanTarget(inputValue) {
+    const domain = extractDomain(inputValue);
+    if (domain) {
+        return {
+            matchMode: 'url',
+            domain: domain,
+            path: extractPath(inputValue),
+            keyword: null
+        };
+    }
+
+    return {
+        matchMode: 'keyword',
+        domain: null,
+        path: '/',
+        keyword: inputValue.toLowerCase()
+    };
+}
+
 // Display status message
 function showStatus(message, type = 'info') {
     const statusEl = document.getElementById('status');
@@ -52,17 +71,11 @@ function performClean() {
     const urlInput = document.getElementById('urlInput').value.trim();
     
     if (!urlInput) {
-        showStatus('Please enter a website URL or domain', 'error');
+        showStatus('Please enter a website URL, domain, or keyword', 'error');
         return;
     }
 
-    const domain = extractDomain(urlInput);
-    const path = extractPath(urlInput);
-
-    if (!domain) {
-        showStatus('Invalid URL or domain format', 'error');
-        return;
-    }
+    const target = buildCleanTarget(urlInput);
 
     const cleanHistory = document.getElementById('cleanHistory').checked;
     const cleanCookies = document.getElementById('cleanCookies').checked;
@@ -79,8 +92,10 @@ function performClean() {
 
     chrome.runtime.sendMessage({
         action: 'cleanData',
-        domain: domain,
-        path: path,
+        matchMode: target.matchMode,
+        domain: target.domain,
+        path: target.path,
+        keyword: target.keyword,
         cleanHistory: cleanHistory,
         cleanCookies: cleanCookies,
         cleanCache: cleanCache
@@ -108,8 +123,10 @@ function cleanCurrentSite() {
 
             chrome.runtime.sendMessage({
                 action: 'cleanData',
+                matchMode: 'url',
                 domain: response.domain,
                 path: '/',
+                keyword: null,
                 cleanHistory: true,
                 cleanCookies: true,
                 cleanCache: true

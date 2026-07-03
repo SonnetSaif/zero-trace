@@ -42,10 +42,11 @@ A lightweight, privacy-focused browser extension that cleans history, cache, and
 ### Method 1: Popup UI
 
 1. Click the extension icon in your toolbar
-2. Enter a website URL or domain:
+2. Enter a website URL, domain, or keyword:
    - `example.com` - cleans domain and all subdomains
    - `https://example.com/path/` - cleans only specific path
    - `sub.example.com` - cleans specific subdomain
+   - `walmart` - cleans entries where URL/title/domain contains this keyword
 3. Select what to clean (History, Cookies, Cache)
 4. Click **Clean Now**
 5. View results showing how many items were deleted
@@ -86,6 +87,13 @@ A lightweight, privacy-focused browser extension that cleans history, cache, and
   - `www.example.com/blog/api`
 - Does NOT match:
   - `example.com/other/`
+
+### Keyword Matching
+- Input: `walmart`
+- Matches:
+  - History entries where URL/title contains `walmart`
+  - Cookies where cookie domain contains `walmart`
+  - Cache origins discovered from matching domains in history/cookies
 
 ## 📋 Permissions Explained
 
@@ -144,7 +152,7 @@ You can customize the keyboard shortcut:
 ## 🐛 Troubleshooting
 
 ### Nothing happens when I click Clean
-- Make sure you've entered a valid URL or domain
+- Make sure you've entered a URL, domain, or keyword
 - Check browser console (F12) for any errors
 - Verify extension has required permissions
 
