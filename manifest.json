@@ -1,5 +1,5 @@
 {
-  "manifest_version": 3,
+  "manifest_version": 2,
   "name": "All-in-One Cleaner",
   "version": "1.0.0",
   "description": "Clean history, cache, and cookies for specific websites",
@@ -15,7 +15,8 @@
     "<all_urls>"
   ],
   "background": {
-    "service_worker": "background.js"
+    "scripts": ["background.js"],
+    "persistent": false
   },
   "action": {
     "default_popup": "popup.html",
