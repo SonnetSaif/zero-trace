@@ -1,5 +1,17 @@
 const browserApi = typeof browser !== 'undefined' ? browser : chrome;
 
+function buildBrowsingDataRemovalOptions(origins) {
+    const options = { since: 0 };
+
+    if (typeof browser !== 'undefined') {
+        options.origin = origins;
+        return options;
+    }
+
+    options.origins = origins;
+    return options;
+}
+
 // Utility function to extract domain from URL
 function extractDomain(url) {
     try {
@@ -152,34 +164,43 @@ async function findOriginsForKeyword(keyword) {
     return Array.from(origins);
 }
 
-// Clean history
-async function cleanHistory(target) {
+async function deleteHistoryUrls(historyItems) {
     return new Promise((resolve) => {
-        if (target.matchMode === 'keyword') {
-            browserApi.history.search({ text: target.keyword, maxResults: 999999 }, (results) => {
-                const toDelete = results.filter((item) =>
-                    isKeywordHistoryMatch(item, target.keyword)
-                );
-
-                toDelete.forEach((item) => {
-                    browserApi.history.deleteUrl({ url: item.url });
-                });
-
-                resolve(toDelete.length);
-            });
+        if (!historyItems.length) {
+            resolve(0);
             return;
         }
 
-        browserApi.history.search({ text: '', maxResults: 999999 }, (results) => {
-            const toDelete = results.filter((item) =>
-                isHistoryMatch(item.url, target.domain, target.path)
-            );
+        let deleted = 0;
+        let processed = 0;
 
-            toDelete.forEach((item) => {
-                browserApi.history.deleteUrl({ url: item.url });
+        historyItems.forEach((item) => {
+            browserApi.history.deleteUrl({ url: item.url }, () => {
+                if (!browserApi.runtime.lastError) {
+                    deleted++;
+                }
+
+                processed++;
+                if (processed === historyItems.length) {
+                    resolve(deleted);
+                }
             });
+        });
+    });
+}
 
-            resolve(toDelete.length);
+// Clean history
+async function cleanHistory(target) {
+    return new Promise((resolve) => {
+        browserApi.history.search({ text: '', maxResults: 999999 }, async (results) => {
+            const toDelete = target.matchMode === 'keyword'
+                ? results.filter((item) => isKeywordHistoryMatch(item, target.keyword))
+                : results.filter((item) =>
+                    isHistoryMatch(item.url, target.domain, target.path)
+                );
+
+            const deleted = await deleteHistoryUrls(toDelete);
+            resolve(deleted);
         });
     });
 }
@@ -216,10 +237,7 @@ async function cleanCache(target) {
                 }
 
                 browserApi.browsingData.remove(
-                    {
-                        origins: origins,
-                        since: 0
-                    },
+                    buildBrowsingDataRemovalOptions(origins),
                     {
                         cache: true,
                         cacheStorage: true,
@@ -242,10 +260,7 @@ async function cleanCache(target) {
         ];
 
         browserApi.browsingData.remove(
-            {
-                origins: origins,
-                since: 0
-            },
+            buildBrowsingDataRemovalOptions(origins),
             {
                 cache: true,
                 cacheStorage: true,
