@@ -24,6 +24,22 @@
    - Status shows "Enabled"
    - Extension icon appears in your toolbar
 
+## Firefox Setup
+
+### Option 1: Temporary Load (Development)
+
+1. Open `about:debugging#/runtime/this-firefox`
+2. Click **Load Temporary Add-on**
+3. Select the extension `manifest.json`
+4. Confirm the add-on appears in the Temporary Extensions list
+
+### Option 2: Persistent Install (Signed XPI)
+
+1. Create a zip of this extension with `manifest.json` at the archive root
+2. Upload to Firefox Add-ons (AMO) for signing
+3. Install the signed `.xpi` output
+4. Restart Firefox and verify the extension remains installed
+
 ### Option 2: Using a File Manager
 
 1. **Windows**:

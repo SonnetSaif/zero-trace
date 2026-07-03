@@ -1,3 +1,5 @@
+const browserApi = typeof browser !== 'undefined' ? browser : chrome;
+
 // Utility function to extract domain from URL
 function extractDomain(url) {
     try {
@@ -60,7 +62,7 @@ function buildCookieRemovalUrl(cookie) {
 
 async function getCookiesByDomain(domain) {
     return new Promise((resolve) => {
-        chrome.cookies.getAll({ domain: domain }, (cookies) => {
+        browserApi.cookies.getAll({ domain: domain }, (cookies) => {
             resolve(cookies);
         });
     });
@@ -88,7 +90,7 @@ async function removeCookies(cookies) {
         let processed = 0;
 
         uniqueCookies.forEach((cookie) => {
-            chrome.cookies.remove({
+            browserApi.cookies.remove({
                 url: buildCookieRemovalUrl(cookie),
                 name: cookie.name,
                 storeId: cookie.storeId
@@ -112,7 +114,7 @@ async function findOriginsForKeyword(keyword) {
 
     await Promise.all([
         new Promise((resolve) => {
-            chrome.history.search({ text: keywordLower, maxResults: 999999 }, (results) => {
+            browserApi.history.search({ text: keywordLower, maxResults: 999999 }, (results) => {
                 results.forEach((item) => {
                     try {
                         const parsedUrl = new URL(item.url);
@@ -130,7 +132,7 @@ async function findOriginsForKeyword(keyword) {
             });
         }),
         new Promise((resolve) => {
-            chrome.cookies.getAll({}, (cookies) => {
+            browserApi.cookies.getAll({}, (cookies) => {
                 cookies.forEach((cookie) => {
                     const cookieDomain = cookie.domain.startsWith('.')
                         ? cookie.domain.slice(1)
@@ -154,13 +156,13 @@ async function findOriginsForKeyword(keyword) {
 async function cleanHistory(target) {
     return new Promise((resolve) => {
         if (target.matchMode === 'keyword') {
-            chrome.history.search({ text: target.keyword, maxResults: 999999 }, (results) => {
+            browserApi.history.search({ text: target.keyword, maxResults: 999999 }, (results) => {
                 const toDelete = results.filter((item) =>
                     isKeywordHistoryMatch(item, target.keyword)
                 );
 
                 toDelete.forEach((item) => {
-                    chrome.history.deleteUrl({ url: item.url });
+                    browserApi.history.deleteUrl({ url: item.url });
                 });
 
                 resolve(toDelete.length);
@@ -168,13 +170,13 @@ async function cleanHistory(target) {
             return;
         }
 
-        chrome.history.search({ text: '', maxResults: 999999 }, (results) => {
+        browserApi.history.search({ text: '', maxResults: 999999 }, (results) => {
             const toDelete = results.filter((item) =>
                 isHistoryMatch(item.url, target.domain, target.path)
             );
 
             toDelete.forEach((item) => {
-                chrome.history.deleteUrl({ url: item.url });
+                browserApi.history.deleteUrl({ url: item.url });
             });
 
             resolve(toDelete.length);
@@ -186,7 +188,7 @@ async function cleanHistory(target) {
 async function cleanCookies(target) {
     if (target.matchMode === 'keyword') {
         return new Promise((resolve) => {
-            chrome.cookies.getAll({}, async (cookies) => {
+            browserApi.cookies.getAll({}, async (cookies) => {
                 const matchingCookies = cookies.filter((cookie) =>
                     cookie.domain.toLowerCase().includes(target.keyword)
                 );
@@ -213,7 +215,7 @@ async function cleanCache(target) {
                     return;
                 }
 
-                chrome.browsingData.remove(
+                browserApi.browsingData.remove(
                     {
                         origins: origins,
                         since: 0
@@ -239,7 +241,7 @@ async function cleanCache(target) {
             `http://www.${target.domain}`
         ];
 
-        chrome.browsingData.remove(
+        browserApi.browsingData.remove(
             {
                 origins: origins,
                 since: 0
@@ -258,7 +260,7 @@ async function cleanCache(target) {
 }
 
 // Listen for messages from popup
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+browserApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'cleanData') {
         (async () => {
             const target = {
@@ -300,7 +302,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     if (message.action === 'getCurrentDomain') {
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        browserApi.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             const url = tabs[0]?.url;
             if (url) {
                 const domain = extractDomain(url);
@@ -313,18 +315,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 });
 
-// Context menu for quick clean
-chrome.contextMenus.create({
-    id: 'cleanCurrentSite',
-    title: 'Clean This Site (All-in-One Cleaner)',
-    contexts: ['page']
+function setupContextMenu() {
+    browserApi.contextMenus.remove('cleanCurrentSite', () => {
+        browserApi.contextMenus.create({
+            id: 'cleanCurrentSite',
+            title: 'Clean This Site (All-in-One Cleaner)',
+            contexts: ['page']
+        });
+    });
+}
+
+browserApi.runtime.onInstalled.addListener(() => {
+    setupContextMenu();
 });
 
-chrome.contextMenus.onClicked.addListener((info, tab) => {
+browserApi.runtime.onStartup.addListener(() => {
+    setupContextMenu();
+});
+
+browserApi.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId === 'cleanCurrentSite') {
         const domain = extractDomain(tab.url);
         if (domain) {
-            chrome.runtime.sendMessage({
+            browserApi.runtime.sendMessage({
                 action: 'cleanData',
                 matchMode: 'url',
                 domain: domain,
@@ -339,12 +352,12 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 });
 
 // Handle keyboard shortcut
-chrome.commands.onCommand.addListener((command) => {
+browserApi.commands.onCommand.addListener((command) => {
     if (command === 'clean-current-site') {
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        browserApi.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             const domain = extractDomain(tabs[0].url);
             if (domain) {
-                chrome.runtime.sendMessage({
+                browserApi.runtime.sendMessage({
                     action: 'cleanData',
                     matchMode: 'url',
                     domain: domain,

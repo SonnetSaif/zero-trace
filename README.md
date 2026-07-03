@@ -31,11 +31,18 @@ A lightweight, privacy-focused browser extension that cleans history, cache, and
 
 ### Firefox
 
-1. **Note**: Firefox has different extension API requirements. For Firefox support, additional modifications needed.
-2. For now, open `about:debugging#/runtime/this-firefox`
-3. Click **Load Temporary Add-on**
-4. Select `manifest.json` from the extension folder
-5. The extension will be loaded (temporary until browser restart)
+1. Open `about:debugging#/runtime/this-firefox`
+2. Click **Load Temporary Add-on**
+3. Select `manifest.json` from the extension folder
+4. The extension will load immediately
+5. If it does not appear, open `about:debugging#/runtime/this-firefox` and check extension errors
+
+### Firefox (Persistent Install / AMO)
+
+1. Zip the extension files (manifest at zip root)
+2. Submit the zip to Firefox Add-ons Developer Hub (AMO)
+3. After signing, install the signed `.xpi`
+4. For self-hosted installs, use Firefox ESR/Developer policies as needed
 
 ## 📖 Usage
 

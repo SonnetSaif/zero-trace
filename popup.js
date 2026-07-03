@@ -1,4 +1,7 @@
 // Extract domain from URL
+const browserApi = typeof browser !== 'undefined' ? browser : chrome;
+
+// Extract domain from URL
 function extractDomain(url) {
     try {
         const parsedUrl = new URL(url.startsWith('http') ? url : `https://${url}`);
@@ -18,9 +21,45 @@ function extractPath(url) {
     }
 }
 
+function looksLikeWebsiteInput(inputValue) {
+    const value = inputValue.trim().toLowerCase();
+
+    if (!value) {
+        return false;
+    }
+
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+        return true;
+    }
+
+    if (value.includes('/')) {
+        return true;
+    }
+
+    if (value === 'localhost' || value.startsWith('localhost:')) {
+        return true;
+    }
+
+    const ipPattern = /^\d{1,3}(\.\d{1,3}){3}(:\d+)?$/;
+    if (ipPattern.test(value)) {
+        return true;
+    }
+
+    return value.includes('.');
+}
+
 function buildCleanTarget(inputValue) {
-    const domain = extractDomain(inputValue);
-    if (domain) {
+    if (looksLikeWebsiteInput(inputValue)) {
+        const domain = extractDomain(inputValue);
+        if (!domain) {
+            return {
+                matchMode: 'keyword',
+                domain: null,
+                path: '/',
+                keyword: inputValue.toLowerCase()
+            };
+        }
+
         return {
             matchMode: 'url',
             domain: domain,
@@ -90,7 +129,7 @@ function performClean() {
     document.getElementById('cleanBtn').disabled = true;
     document.getElementById('cleanCurrentBtn').disabled = true;
 
-    chrome.runtime.sendMessage({
+    browserApi.runtime.sendMessage({
         action: 'cleanData',
         matchMode: target.matchMode,
         domain: target.domain,
@@ -114,14 +153,14 @@ function performClean() {
 
 // Get current domain and clean
 function cleanCurrentSite() {
-    chrome.runtime.sendMessage({ action: 'getCurrentDomain' }, (response) => {
+    browserApi.runtime.sendMessage({ action: 'getCurrentDomain' }, (response) => {
         if (response.domain) {
             document.getElementById('urlInput').value = response.domain;
             showStatus('Cleaning current site... Please wait', 'loading');
             document.getElementById('cleanBtn').disabled = true;
             document.getElementById('cleanCurrentBtn').disabled = true;
 
-            chrome.runtime.sendMessage({
+            browserApi.runtime.sendMessage({
                 action: 'cleanData',
                 matchMode: 'url',
                 domain: response.domain,
@@ -160,7 +199,7 @@ document.getElementById('urlInput').addEventListener('keypress', (e) => {
 
 // Load saved preferences
 window.addEventListener('DOMContentLoaded', () => {
-    chrome.storage.local.get(['cleanHistory', 'cleanCookies', 'cleanCache'], (data) => {
+    browserApi.storage.local.get(['cleanHistory', 'cleanCookies', 'cleanCache'], (data) => {
         if (data.cleanHistory !== undefined) {
             document.getElementById('cleanHistory').checked = data.cleanHistory;
         }
@@ -175,11 +214,11 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // Save preferences when changed
 document.getElementById('cleanHistory').addEventListener('change', (e) => {
-    chrome.storage.local.set({ cleanHistory: e.target.checked });
+    browserApi.storage.local.set({ cleanHistory: e.target.checked });
 });
 document.getElementById('cleanCookies').addEventListener('change', (e) => {
-    chrome.storage.local.set({ cleanCookies: e.target.checked });
+    browserApi.storage.local.set({ cleanCookies: e.target.checked });
 });
 document.getElementById('cleanCache').addEventListener('change', (e) => {
-    chrome.storage.local.set({ cleanCache: e.target.checked });
+    browserApi.storage.local.set({ cleanCache: e.target.checked });
 });
