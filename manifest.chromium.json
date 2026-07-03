@@ -15,19 +15,11 @@
     "<all_urls>"
   ],
   "background": {
-    "scripts": [
-      "background.js"
-    ]
+    "service_worker": "background.js"
   },
   "action": {
     "default_popup": "popup.html",
     "default_title": "All-in-One Cleaner"
-  },
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "all-in-one-cleaner@local",
-      "strict_min_version": "121.0"
-    }
   },
   "commands": {
     "clean-current-site": {

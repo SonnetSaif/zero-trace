@@ -4,6 +4,10 @@
 
 ### Option 1: Load Unpacked (Recommended for Development)
 
+0. **Generate Chromium manifest**:
+   - PowerShell (no Node required): `powershell -ExecutionPolicy Bypass -File .\\scripts\\use-manifest.ps1 chromium`
+   - Optional npm: `npm run manifest:chromium`
+
 1. **Navigate to Extensions**:
    - Chrome: Open `chrome://extensions/`
    - Edge: Open `edge://extensions/`
@@ -28,10 +32,13 @@
 
 ### Option 1: Temporary Load (Development)
 
-1. Open `about:debugging#/runtime/this-firefox`
-2. Click **Load Temporary Add-on**
-3. Select the extension `manifest.json`
-4. Confirm the add-on appears in the Temporary Extensions list
+1. Generate Firefox manifest:
+   - PowerShell (no Node required): `powershell -ExecutionPolicy Bypass -File .\\scripts\\use-manifest.ps1 firefox`
+   - Optional npm: `npm run manifest:firefox`
+2. Open `about:debugging#/runtime/this-firefox`
+3. Click **Load Temporary Add-on**
+4. Select the extension `manifest.json`
+5. Confirm the add-on appears in the Temporary Extensions list
 
 ### Option 2: Persistent Install (Signed XPI)
 

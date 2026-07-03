@@ -23,19 +23,25 @@ A lightweight, privacy-focused browser extension that cleans history, cache, and
 ### Chrome / Edge / Brave / Chromium-based Browsers
 
 1. **Download or Clone** this repository
-2. Open `chrome://extensions/` (or `edge://extensions/`)
-3. Enable **Developer Mode** (top right corner)
-4. Click **Load unpacked**
-5. Select the extension folder
-6. The extension is now installed! ✅
+2. Generate Chromium manifest (pick one):
+  - PowerShell (no Node required): `powershell -ExecutionPolicy Bypass -File .\\scripts\\use-manifest.ps1 chromium`
+  - Optional npm: `npm run manifest:chromium`
+3. Open `chrome://extensions/` (or `edge://extensions/`)
+4. Enable **Developer Mode** (top right corner)
+5. Click **Load unpacked**
+6. Select the extension folder
+7. The extension is now installed! ✅
 
 ### Firefox
 
-1. Open `about:debugging#/runtime/this-firefox`
-2. Click **Load Temporary Add-on**
-3. Select `manifest.json` from the extension folder
-4. The extension will load immediately
-5. If it does not appear, open `about:debugging#/runtime/this-firefox` and check extension errors
+1. Generate Firefox manifest (pick one):
+  - PowerShell (no Node required): `powershell -ExecutionPolicy Bypass -File .\\scripts\\use-manifest.ps1 firefox`
+  - Optional npm: `npm run manifest:firefox`
+2. Open `about:debugging#/runtime/this-firefox`
+3. Click **Load Temporary Add-on**
+4. Select `manifest.json` from the extension folder
+5. The extension will load immediately
+6. If it does not appear, open `about:debugging#/runtime/this-firefox` and check extension errors
 
 ### Firefox (Persistent Install / AMO)
 

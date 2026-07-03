@@ -3,8 +3,10 @@
   "version": "1.0.0",
   "description": "A browser extension to clean history, cache, and cookies for specific websites",
   "scripts": {
+    "manifest:chromium": "node scripts/build-manifest.js chromium",
+    "manifest:firefox": "node scripts/build-manifest.js firefox",
     "test": "echo \"No tests yet\" && exit 0",
-    "build": "echo \"Extension is ready to use\"",
+    "build": "npm run manifest:chromium && echo \"Extension is ready to use\"",
     "lint": "eslint . --ext .js"
   },
   "keywords": [
