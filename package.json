@@ -1,0 +1,23 @@
+{
+  "name": "all-in-one-cleaner",
+  "version": "1.0.0",
+  "description": "A browser extension to clean history, cache, and cookies for specific websites",
+  "scripts": {
+    "test": "echo \"No tests yet\" && exit 0",
+    "build": "echo \"Extension is ready to use\"",
+    "lint": "eslint . --ext .js"
+  },
+  "keywords": [
+    "browser-extension",
+    "privacy",
+    "cleaner",
+    "history",
+    "cookies",
+    "cache"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^8.0.0"
+  }
+}

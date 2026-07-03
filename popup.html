@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All-in-One Cleaner</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🧹 Cleaner</h1>
+        
+        <div class="input-group">
+            <label for="urlInput">Website URL or Domain:</label>
+            <input 
+                type="text" 
+                id="urlInput" 
+                placeholder="e.g., example.com or https://example.com/path/"
+                autocomplete="off"
+            >
+        </div>
+
+        <div class="checkbox-group">
+            <label>
+                <input type="checkbox" id="cleanHistory" checked>
+                Clean History
+            </label>
+            <label>
+                <input type="checkbox" id="cleanCookies" checked>
+                Clean Cookies
+            </label>
+            <label>
+                <input type="checkbox" id="cleanCache" checked>
+                Clean Cache
+            </label>
+        </div>
+
+        <button id="cleanBtn" class="btn btn-primary">Clean Now</button>
+        <button id="cleanCurrentBtn" class="btn btn-secondary">Clean Current Site</button>
+
+        <div id="status" class="status"></div>
+        <div id="results" class="results"></div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

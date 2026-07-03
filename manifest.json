@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "All-in-One Cleaner",
+  "version": "1.0.0",
+  "description": "Clean history, cache, and cookies for specific websites",
+  "permissions": [
+    "history",
+    "cookies",
+    "browsingData",
+    "contextMenus",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "All-in-One Cleaner"
+  },
+  "commands": {
+    "clean-current-site": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+L",
+        "mac": "Command+Shift+L"
+      },
+      "description": "Clean history, cache, and cookies for current site"
+    }
+  }
+}
